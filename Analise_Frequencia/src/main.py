@@ -48,6 +48,8 @@ def plot_quant(data, language):
 
 def main():
     st.title('Análise de Frequência de Caracteres')
+    
+    st.write('Essa página destina-se a análise da frequência de caracteres de um ou mais idiomas, comparando em porcentagem e quantidade as 5 maiores presenças de letras de uma linguagem em sua escrita.')
 
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     db_dir = os.path.join(base_dir, 'database')
@@ -101,13 +103,18 @@ def main():
             st.subheader('Gráfico de Quantidade')
             plot_quant(quant, idioma)
 
-    st.header('B) Letras mais frequentes (5 letras mais utilizadas)')
+    st.header('B) Letras mais frequentes - 5 letras mais utilizadas em cada idioma')
 
     for idioma, (freq, _) in idiomas.items():
         df_freq = pd.DataFrame.from_dict(freq, orient='index', columns=['Frequência (%)'])
         df_freq.sort_values(by='Frequência (%)', ascending=False, inplace=True)
-        top_chars = df_freq.head(5).index.tolist()
-        st.write(f"{idioma}: {', '.join(top_chars)}")
+        top_chars = df_freq.head(5)
+        
+        st.markdown(f"### Frequência de caracteres - **{idioma}**")
+        st.dataframe(top_chars.style.format({'Frequência (%)': '{:.2f}'}).set_properties(**{
+            'font-size': '16px',
+            'text-align': 'center'
+        }))
 
 if __name__ == '__main__':
     main()
