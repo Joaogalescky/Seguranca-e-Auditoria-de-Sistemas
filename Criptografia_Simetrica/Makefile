@@ -1,5 +1,5 @@
 aula:
-	@echo "Aula de Segurança e Auditoria"
+	@echo "Aula de Seguranca e Auditoria"
 
 all: run
 
