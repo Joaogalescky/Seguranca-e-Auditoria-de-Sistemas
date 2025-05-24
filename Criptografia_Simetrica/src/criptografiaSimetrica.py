@@ -85,6 +85,32 @@ def decifrarArquivo(caminho_arquivo, chave):
         f.write(conteudo_decifrado)
         
     print(f"[SUCESSO] Arquivo decifrado salvo em: {saida}")
+
+# ====== Visualizar cabecalho ======
+
+def visualizar_cabecalho(caminho_arquivo):
+    try:
+        with open(caminho_arquivo, "rb") as f:
+            conteudo = f.read(32)
+        
+        identificador = conteudo[0:2]
+        versao = conteudo[2]
+        algoritmo = conteudo[3]
+        modo = conteudo[4]
+        iv = conteudo[5:21]
+        reservado = conteudo[21:32]
+
+        info = (
+            f"Identificador: {identificador.decode(errors='ignore')}\n"
+            f"Versão: {versao}\n"
+            f"Algoritmo: {algoritmo} (1 = AES)\n"
+            f"Modo: {modo} (1 = CBC)\n"
+            f"IV: {iv.hex()}\n"
+            f"Reservado: {reservado.hex()}"
+        )
+        return info
+    except Exception as e:
+        return f"Erro ao ler cabeçalho: {str(e)}"
     
 # ====== Interface Tkinter ======
 class AppCripto:
@@ -108,6 +134,9 @@ class AppCripto:
 
         self.botao_decifrar = tk.Button(master, text="Decifrar Arquivo", command=self.decifrar)
         self.botao_decifrar.pack(pady=5)
+        
+        self.botao_cabecalho = tk.Button(master, text="Ver Cabeçalho", command=self.mostrar_cabecalho)
+        self.botao_cabecalho.pack(pady=5)
 
     def selecionar_arquivo(self):
         caminho = filedialog.askopenfilename()
@@ -139,6 +168,13 @@ class AppCripto:
             messagebox.showinfo("Sucesso", "Arquivo decifrado com sucesso!")
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao decifrar: {str(e)}")
+            
+    def mostrar_cabecalho(self):
+        if not self.arquivo:
+            messagebox.showwarning("Aviso", "Selecione um arquivo primeiro.")
+            return 
+        info = visualizar_cabecalho(self.arquivo)
+        messagebox.showinfo("Cabeçalho do Arquivo", info)
 
 # ====== Execução Principal ======
 # Inicialização
