@@ -56,6 +56,9 @@ def decifrarArquivo(caminho_arquivo, chave):
     # Lê arquivo '.enc', valida o cabeçalho, extrai IV, decifra o conteúdo e salva arquivo original
     with open(caminho_arquivo, "rb") as f:
         conteudo = f.read()
+        
+    if len(conteudo) < 32:
+        raise ValueError("Tamanho de arquivo incompátivel para gerar cabeçalho válido.")
 
     header = conteudo[:32]
     identificador = header[0:2]
@@ -63,8 +66,17 @@ def decifrarArquivo(caminho_arquivo, chave):
     algoritmo = header[3]
     modo = header[4]
     iv = header[5:21]
-    
     conteudo_cifrado = conteudo[32:]
+    
+    if identificador != b'ED':
+        raise ValueError("Arquivo não possui identificador válido.")
+    if versao != 0x01:
+        raise ValueError(f"Versão de cabeçalho não suportada: {versao}")
+    if algoritmo != 0x01:
+        raise ValueError(f"Algoritmo não suportado (esperado AES): {algoritmo}")
+    if modo != 0x01:
+        raise ValueError(f"Modo de operação não suportado (esperado CBC): {modo}")
+    
     conteudo_decifrado = decifrar_AES_CBC(chave, iv, conteudo_cifrado)
     
     # Salvar em novo arquivo
@@ -109,7 +121,7 @@ class AppCripto:
             return
         try:
             cifrarArquivo(self.arquivo, self.chave)
-            messagebox.showinfo("Sucesso", "Arquivo cifrado com sucesso.")
+            messagebox.showinfo("Sucesso", "Arquivo cifrado com sucesso!")
         except Exception as e:
             messagebox.showerror("Erro", str(e))
 
@@ -117,11 +129,16 @@ class AppCripto:
         if not self.arquivo:
             messagebox.showwarning("Aviso", "Selecione um arquivo primeiro.")
             return
+        
+        if not self.arquivo.endswith(".enc"):
+            messagebox.showwarning("Aviso", "Selecione um arquivo com extensão .enc para decifrar.")
+            return
+    
         try:
             decifrarArquivo(self.arquivo, self.chave)
-            messagebox.showinfo("Sucesso", "Arquivo decifrado com sucesso.")
+            messagebox.showinfo("Sucesso", "Arquivo decifrado com sucesso!")
         except Exception as e:
-            messagebox.showerror("Erro", str(e))
+            messagebox.showerror("Erro", f"Falha ao decifrar: {str(e)}")
 
 # ====== Execução Principal ======
 # Inicialização
