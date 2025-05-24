@@ -1,0 +1,51 @@
+# Bibliotecas
+import secrets
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import padding
+
+def cifrar_aes_cbc(chave, iv, texto_claro):
+    padder = padding.PKCS7(128).padder()
+    padded = padder.update(texto_claro) + padder.finalize()
+    
+    cifrar = Cipher(algorithms.AES(chave), modes.CBC(iv), backend=default_backend())
+    encryptor = cifrar.encryptor()
+    return encryptor.update(padded) + encryptor.finalize()
+
+def cifrarArquivo(caminho_arquivo, chave):
+    # Ler conteúdo
+    with open(caminho_arquivo, "rb") as f:
+        conteudo = f.read()
+        
+    # Gerar IV aleatório
+    iv = secrets.token_bytes(16)
+    
+    # Criptografar conteúdo
+    conteudo_cifrado = cifrar_aes_cbc(chave, iv, conteudo)
+    
+    # Construir cabeçalho/metadados de 32 bytes
+    header = bytearray()
+    header += b'ED' # Identificador (2 bytes)
+    header += bytes([0x01]) # Versão (1 byte)
+    header += bytes([0x01]) # Algoritmo (1 byte)
+    header += bytes([0x01]) # Modo (1 byte)
+    header += iv # IV (16 bytes)
+    header += bytes(11) # Reservado (11 bytes)
+    
+    # Escrever novo arquivo com cabeçalho + conteúdo cifrado
+    saida = caminho_arquivo + ".enc"
+    with open(saida, "wb") as f:
+        f.write(header + conteudo_cifrado)
+        
+    print(f"[SUCESSO] Arquivo cifrado salvo em: {saida}")
+    
+    
+    # Criar um arquivo de teste
+    with open("teste.txt", "wb") as f:
+        f.write(b"Exemplo de conteudo super secreto.")
+
+    # Chave AES de 256 bits
+    chave = bytes(range(1, 33))
+
+    # Cifrar
+    cifrarArquivo("teste.txt", chave)
