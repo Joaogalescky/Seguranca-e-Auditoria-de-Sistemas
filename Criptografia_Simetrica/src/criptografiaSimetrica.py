@@ -1,4 +1,3 @@
-# Bibliotecas
 import tkinter as tk
 from tkinter import filedialog, messagebox
 import secrets
@@ -6,8 +5,6 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding
 import os
-
-# ====== Cifrar ======
 
 def cifrar_AES_CBC(chave, iv, texto_claro):
     padder = padding.PKCS7(128).padder()
@@ -41,8 +38,6 @@ def cifrarArquivo(caminho_arquivo, chave):
     with open(saida, "wb") as f:
         f.write(header + conteudo_cifrado)
     print(f"[SUCESSO] Arquivo cifrado salvo em: {saida}")
-    
-# ====== Decifrar ======
     
 def decifrar_AES_CBC(chave, iv, texto_cifrado):
     # Decifrar e remover padding
@@ -86,8 +81,6 @@ def decifrarArquivo(caminho_arquivo, chave):
         
     print(f"[SUCESSO] Arquivo decifrado salvo em: {saida}")
 
-# ====== Visualizar cabecalho ======
-
 def visualizar_cabecalho(caminho_arquivo):
     try:
         with open(caminho_arquivo, "rb") as f:
@@ -112,7 +105,6 @@ def visualizar_cabecalho(caminho_arquivo):
     except Exception as e:
         return f"Erro ao ler cabeçalho: {str(e)}"
     
-# ====== Interface Tkinter ======
 class AppCripto:
     # Janela
     def __init__(self, master):
@@ -176,7 +168,6 @@ class AppCripto:
         info = visualizar_cabecalho(self.arquivo)
         messagebox.showinfo("Cabeçalho do Arquivo", info)
 
-# ====== Execução Principal ======
 # Inicialização
 if __name__ == "__main__":
     root = tk.Tk()
