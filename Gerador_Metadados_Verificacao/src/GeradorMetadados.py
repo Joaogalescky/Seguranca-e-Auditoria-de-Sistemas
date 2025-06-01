@@ -78,6 +78,39 @@ def verificar_integridade(caminho_arquivo, chave):
         return "[ATENÇÃO]! Arquivo foi modificado ou corrompido!"
 
 
+def visualizar_meta(caminho_arquivo):
+    caminho_metadados = caminho_arquivo + ".meta"
+
+    if not os.path.exists(caminho_metadados):
+        return "[ERRO] Arquivo .meta não encontrado!"
+
+    with open(caminho_metadados, "rb") as f:
+        dados = f.read(48)
+
+    if len(dados) != 48:
+        return "[ERRO] Arquivo .meta inválido!"
+
+    ident = dados[0:2]
+    versao = dados[2]
+    algoritmo = dados[3]
+    modo = dados[4]
+    iv = dados[5:21]
+    fingerprint = dados[21:37]
+    reservado = dados[37:48]
+
+    info = (
+        f"Identificador: {ident.decode(errors='ignore')}\n"
+        f"Versão: {versao}\n"
+        f"Algoritmo: {algoritmo} (1 = AES)\n"
+        f"Modo: {modo} (1 = CBC)\n"
+        f"IV: {iv.hex()}\n"
+        f"Fingerprint: {fingerprint.hex()}\n"
+        f"Reservado: {reservado.hex()}"
+    )
+
+    return info
+
+
 class AppMeta:
     def __init__(self, master):
         self.master = master
@@ -102,6 +135,10 @@ class AppMeta:
         self.botao_verificar = tk.Button(
             master, text="Verificar Integridade", command=self.verificar)
         self.botao_verificar.pack(pady=5)
+        
+        self.botao_visualizar = tk.Button(
+            master, text="Visualizar Metadados", command=self.visualizar_metadados)
+        self.botao_visualizar.pack(pady=5)
 
     def selecionar_arquivo(self):
         caminho = filedialog.askopenfilename()
@@ -131,6 +168,16 @@ class AppMeta:
                 messagebox.showinfo("Integridade", resultado)
         except Exception as e:
             messagebox.showerror("[ERRO]", f"Erro na verificação:\n{e}")
+
+    def visualizar_metadados(self):
+        if not self.arquivo:
+            messagebox.showwarning("[AVISO]", "Selecione um arquivo!")
+            return
+        try:
+            info = visualizar_meta(self.arquivo)
+            messagebox.showinfo("Conteúdo do .meta", info)
+        except Exception as e:
+            messagebox.showerror("[ERRO]", f"Erro ao ler .meta:\n{e}")
 
 
 if __name__ == "__main__":
