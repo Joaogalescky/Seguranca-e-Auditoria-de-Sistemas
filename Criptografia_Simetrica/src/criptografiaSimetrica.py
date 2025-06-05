@@ -1,19 +1,20 @@
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.backends import default_backend
+import secrets
+import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
-import secrets
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import padding
-import os
 
-def cifrar_AES_CBC(chave, iv, texto_claro):
+def aes_cbc_cifrar(chave, iv, texto_claro):
     padder = padding.PKCS7(128).padder()
     padded = padder.update(texto_claro) + padder.finalize()
     cifrar = Cipher(algorithms.AES(chave), modes.CBC(iv), backend=default_backend())
-    encriptar = cifrar.encryptor()
-    return encriptar.update(padded) + encriptar.finalize()
+    cifrador = cifrar.encryptor()
+    texto_cifrado = cifrador.update(padded) + cifrador.finalize()
+    return texto_cifrado
 
-def cifrarArquivo(caminho_arquivo, chave):
+def cifrar_arquivo(caminho_arquivo, chave):
     # Ler conteúdo
     with open(caminho_arquivo, "rb") as f:
         conteudo = f.read()
@@ -22,7 +23,7 @@ def cifrarArquivo(caminho_arquivo, chave):
     iv = secrets.token_bytes(16)
     
     # Criptografar conteúdo
-    conteudo_cifrado = cifrar_AES_CBC(chave, iv, conteudo)
+    conteudo_cifrado = aes_cbc_cifrar(chave, iv, conteudo)
     
     # Construir cabeçalho/metadados de 32 bytes
     header = bytearray()
@@ -39,15 +40,16 @@ def cifrarArquivo(caminho_arquivo, chave):
         f.write(header + conteudo_cifrado)
     print(f"[SUCESSO] Arquivo cifrado salvo em: {saida}")
     
-def decifrar_AES_CBC(chave, iv, texto_cifrado):
+def aes_cbc_decifrar(chave, iv, texto_cifrado):
     # Decifrar e remover padding
     cifrar = Cipher(algorithms.AES(chave), modes.CBC(iv), backend=default_backend())
     decifrar = cifrar.decryptor()
     padded_texto_claro = decifrar.update(texto_cifrado) + decifrar.finalize()
     unpadder = padding.PKCS7(128).unpadder()
-    return unpadder.update(padded_texto_claro) + unpadder.finalize()
+    texto_decifrado = unpadder.update(padded_texto_claro) + unpadder.finalize()
+    return texto_decifrado
 
-def decifrarArquivo(caminho_arquivo, chave):
+def decifrar_arquivo(caminho_arquivo, chave):
     # Lê arquivo '.enc', valida o cabeçalho, extrai IV, decifra o conteúdo e salva arquivo original
     with open(caminho_arquivo, "rb") as f:
         conteudo = f.read()
@@ -72,7 +74,7 @@ def decifrarArquivo(caminho_arquivo, chave):
     if modo != 0x01:
         raise ValueError(f"Modo de operação não suportado (esperado CBC): {modo}")
     
-    conteudo_decifrado = decifrar_AES_CBC(chave, iv, conteudo_cifrado)
+    conteudo_decifrado = aes_cbc_decifrar(chave, iv, conteudo_cifrado)
     
     # Salvar em novo arquivo
     saida = caminho_arquivo.replace(".enc", "decifrado.txt")
@@ -141,7 +143,7 @@ class AppCripto:
             messagebox.showwarning("Aviso", "Selecione um arquivo primeiro.")
             return
         try:
-            cifrarArquivo(self.arquivo, self.chave)
+            cifrar_arquivo(self.arquivo, self.chave)
             messagebox.showinfo("Sucesso", "Arquivo cifrado com sucesso!")
         except Exception as e:
             messagebox.showerror("Erro", str(e))
@@ -156,7 +158,7 @@ class AppCripto:
             return
     
         try:
-            decifrarArquivo(self.arquivo, self.chave)
+            decifrar_arquivo(self.arquivo, self.chave)
             messagebox.showinfo("Sucesso", "Arquivo decifrado com sucesso!")
         except Exception as e:
             messagebox.showerror("Erro", f"Falha ao decifrar: {str(e)}")
