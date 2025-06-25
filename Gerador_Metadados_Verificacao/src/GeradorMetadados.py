@@ -7,15 +7,14 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 
 
-def aes_cbc_cifrar(chave, iv, dados):
-    # Criptografa os dados usando AES-CBC com padding PKCS7
-    padder = padding.PKCS7(128).padder()
-    padded = padder.update(dados) + padder.finalize()
-    cifrar = Cipher(algorithms.AES(chave), modes.CBC(iv), backend=default_backend())
-    cifrador = cifrar.encryptor()
+def aes_cbc_cifrar(chave, iv, texto_claro):
+    padder = padding.PKCS7(128).padder() # 128 = 16 bytes
+    padded = padder.update(texto_claro) + padder.finalize() # Aplica o padder ao texo_claro
+    cifrar = Cipher(algorithms.AES(chave), modes.CBC(iv), backend=default_backend()) # Prepara para a criptografia 
+    # backend = motor criptografico
+    cifrador = cifrar.encryptor() 
     texto_cifrado = cifrador.update(padded) + cifrador.finalize()
     return texto_cifrado
-
 
 def gerar_metadados(caminho_arquivo, chave):
     with open(caminho_arquivo, "rb") as f:
@@ -23,7 +22,7 @@ def gerar_metadados(caminho_arquivo, chave):
 
     iv = secrets.token_bytes(16)
     texto_cifrado = aes_cbc_cifrar(chave, iv, conteudo)
-    fingerprint = texto_cifrado[-16:]
+    fingerprint = texto_cifrado[-16:] # Pegar tudo a partir de -16
 
     header = bytearray()
     header += b'CF'             # Identificador
@@ -39,7 +38,6 @@ def gerar_metadados(caminho_arquivo, chave):
         f.write(header)
 
     return saida
-
 
 def verificar_integridade(caminho_arquivo, chave):
     caminho_metadados = caminho_arquivo + ".meta"
@@ -113,7 +111,7 @@ class AppMeta:
         self.master = master
         master.title(
             "Verificação de Integridade - Criptografia AES - Modo CBC")
-        master.geometry("200x200")
+        master.geometry("200x230")
         self.arquivo = None
         self.chave = bytes(range(1, 33))  # 256 bits
 
