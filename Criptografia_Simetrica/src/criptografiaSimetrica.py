@@ -7,16 +7,17 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 
 def aes_cbc_cifrar(chave, iv, texto_claro):
-    padder = padding.PKCS7(128).padder()
-    padded = padder.update(texto_claro) + padder.finalize()
-    cifrar = Cipher(algorithms.AES(chave), modes.CBC(iv), backend=default_backend())
-    cifrador = cifrar.encryptor()
+    padder = padding.PKCS7(128).padder() # 128 = 16 bytes
+    padded = padder.update(texto_claro) + padder.finalize() # Aplica o padder ao texo_claro
+    cifrar = Cipher(algorithms.AES(chave), modes.CBC(iv), backend=default_backend()) # Prepara para a criptografia 
+    # backend = motor criptografico
+    cifrador = cifrar.encryptor() 
     texto_cifrado = cifrador.update(padded) + cifrador.finalize()
     return texto_cifrado
 
 def cifrar_arquivo(caminho_arquivo, chave):
     # Ler conteúdo
-    with open(caminho_arquivo, "rb") as f:
+    with open(caminho_arquivo, "rb") as f: #rb = read binary
         conteudo = f.read()
         
     # Gerar IV aleatório
@@ -28,7 +29,7 @@ def cifrar_arquivo(caminho_arquivo, chave):
     # Construir cabeçalho/metadados de 32 bytes
     header = bytearray()
     header += b'ED' # Identificador (2 bytes)
-    header += bytes([0x01]) # Versão (1 byte)
+    header += bytes([0x01]) # Versão (1 byte) [0x01] = Hexadecimal, cria um objeto de tamanho de 1 byte
     header += bytes([0x01]) # Algoritmo (1 byte)
     header += bytes([0x01]) # Modo (1 byte)
     header += iv # IV (16 bytes)
@@ -57,13 +58,13 @@ def decifrar_arquivo(caminho_arquivo, chave):
     if len(conteudo) < 32:
         raise ValueError("Tamanho de arquivo incompátivel para gerar cabeçalho válido.")
 
-    header = conteudo[:32]
+    header = conteudo[:32] # Ir até o 32
     identificador = header[0:2]
     versao = header[2]
     algoritmo = header[3]
     modo = header[4]
     iv = header[5:21]
-    conteudo_cifrado = conteudo[32:]
+    conteudo_cifrado = conteudo[32:] # Começar por 32
     
     if identificador != b'ED':
         raise ValueError("Arquivo não possui identificador válido.")
@@ -112,7 +113,7 @@ class AppCripto:
     def __init__(self, master):
         self.master = master
         master.title("Criptografia AES-CBC")
-        master.geometry("400x200")
+        master.geometry("400x250")
 
         self.arquivo = None
         self.chave = bytes(range(1, 33))  # chave padrão de 256 bits
