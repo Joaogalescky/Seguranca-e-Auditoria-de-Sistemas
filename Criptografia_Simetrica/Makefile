@@ -1,5 +1,5 @@
-aula:
-	@echo "Aula de Seguranca e Auditoria"
+test:
+	@echo "Test Well Succeded"
 
 all: run
 
