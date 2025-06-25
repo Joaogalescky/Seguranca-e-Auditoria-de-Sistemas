@@ -1,13 +1,13 @@
 # Gerador de Arquivo de Metadados para Verificação de Integridade
 
-Programa de geração de arquivo de metadados (48 *bytes*) contendo um cabeçalho e um *fingerprint* (16 *bytes*), para verificar se o arquivo original foi modificado, o ultimo bloco da criptografia AES (_Advanced Encryption Standard_) no modo CBC (_Cipher Block Chaining_).
+Programa de geração de arquivo de metadados (48 _bytes_) contendo um cabeçalho e um _fingerprint_ (16 _bytes_), para verificar se o arquivo original foi modificado, o ultimo bloco da criptografia AES (_Advanced Encryption Standard_) no modo CBC (_Cipher Block Chaining_).
 
 ## Instruções
 1. **Cabeçalho do Arquivo de Metadados (48 bytes)**: O arquivo de metadados deve conter exatamente 48 bytes, dispostos assim::
 
     | Campo| Tamanho (bytes) | Descrição
     |:--------|:--------:|:--------
-    | Identificador | 2 | Sequência fixa, ex: ==b'CF'==, para indicar “*Crypto Fingerprint*”
+    | Identificador | 2 | Sequência fixa, ex: ==b'CF'==, para indicar “_Crypto Fingerprint_”
     | Versão | 1 | Versão do formato (ex: ==1==)
     | Algoritmo | 1 | ==1== para AES
     | Modo | 1 | ==1== para CBC
@@ -24,7 +24,7 @@ Programa de geração de arquivo de metadados (48 *bytes*) contendo um cabeçalh
    3. **Cálculo do Fingerprint**:
    - Ler todo o conteúdo do arquivo original.
    - Aplicar AES-CBC com paadding PKCS7 sobre esse conteúdo somente em memória  (não salvar o texto cifrado em disco).
-   - Extrair os últimos 16 bytes do ciphertext gerado como *fingerprint*.
+   - Extrair os últimos 16 bytes do ciphertext gerado como _fingerprint_.
    4. **Montagem do Cabeçalho**:
    - Empacotar, em ordem:
    - Identificador (2 bytes)
@@ -40,7 +40,7 @@ Programa de geração de arquivo de metadados (48 *bytes*) contendo um cabeçalh
 3. **Verificação de Integridade**:
    1. **Leitura do Arquivo de Metadados**:
    - Extrair cada campo do cabeçalho e validar.
-   2. **Reprodução do *Fingerprint**:
+   2. **Reprodução do _Fingerprint_**:
    - Ler o mesmo arquivo original.
    - Executar AES‑CBC in‑memory com a chave e IV extraídos.
    - Extrair os últimos 16 bytes do ciphertext.
