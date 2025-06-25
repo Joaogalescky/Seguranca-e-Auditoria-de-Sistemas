@@ -77,3 +77,19 @@ def validar_mensagem(mensagem_recebida, chave_secreta, nonces_usados=set(), jane
     else:
         print("HMAC inválido.")
         return False
+
+# Inicialização
+if __name__ == "__main__":
+    chave = "segredo_super_secreto_123"
+    dados_estacao = {
+        "temperatura": 22.5,
+        "umidade": 60,
+        "pressao": 1012
+    }
+
+    mensagem = gerar_mensagem_autenticada(dados_estacao, chave)
+    print("Mensagem enviada:", mensagem)
+
+    nonces_usados = set()
+    valido = validar_mensagem(mensagem, chave, nonces_usados)
+    print("Mensagem válida?", valido)
