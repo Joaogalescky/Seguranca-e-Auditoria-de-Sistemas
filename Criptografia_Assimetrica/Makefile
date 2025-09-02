@@ -7,7 +7,7 @@ install:
 	pip3 install -r requirements.txt
 	
 run:
-	python src/criptografiaAssimetrica.py
+	python src/envelopeDigital.py
 
 git:
 	git config --global user.email "joaocvgalescky@gmail.com"
