@@ -56,7 +56,7 @@ def decifrar_arquivo(caminho_arquivo, chave):
         conteudo = f.read()
         
     if len(conteudo) < 32:
-        raise ValueError("Tamanho de arquivo incompátivel para gerar cabeçalho válido.")
+        raise ValueError("[ERRO] Tamanho de arquivo incompátivel para gerar cabeçalho válido.")
 
     header = conteudo[:32] # Ir até o 32
     identificador = header[0:2]
@@ -67,13 +67,13 @@ def decifrar_arquivo(caminho_arquivo, chave):
     conteudo_cifrado = conteudo[32:] # Começar por 32
     
     if identificador != b'ED':
-        raise ValueError("Arquivo não possui identificador válido.")
+        raise ValueError("[ERRO] Arquivo não possui identificador válido.")
     if versao != 0x01:
-        raise ValueError(f"Versão de cabeçalho não suportada: {versao}")
+        raise ValueError(f"[ERRO] Versão de cabeçalho não suportada: {versao}")
     if algoritmo != 0x01:
-        raise ValueError(f"Algoritmo não suportado (esperado AES): {algoritmo}")
+        raise ValueError(f"[ERRO] Algoritmo não suportado (esperado AES): {algoritmo}")
     if modo != 0x01:
-        raise ValueError(f"Modo de operação não suportado (esperado CBC): {modo}")
+        raise ValueError(f"[ERRO] Modo de operação não suportado (esperado CBC): {modo}")
     
     conteudo_decifrado = aes_cbc_decifrar(chave, iv, conteudo_cifrado)
     
@@ -141,32 +141,32 @@ class AppCripto:
 
     def cifrar(self):
         if not self.arquivo:
-            messagebox.showwarning("Aviso", "Selecione um arquivo primeiro.")
+            messagebox.showwarning("[AVISO]", "Selecione um arquivo primeiro.")
             return
         try:
             cifrar_arquivo(self.arquivo, self.chave)
-            messagebox.showinfo("Sucesso", "Arquivo cifrado com sucesso!")
+            messagebox.showinfo("[SUCESSO]", "Arquivo cifrado com sucesso!")
         except Exception as e:
-            messagebox.showerror("Erro", str(e))
+            messagebox.showerror("[ERRO]", str(e))
 
     def decifrar(self):
         if not self.arquivo:
-            messagebox.showwarning("Aviso", "Selecione um arquivo primeiro.")
+            messagebox.showwarning("[AVISO]", "Selecione um arquivo primeiro.")
             return
         
         if not self.arquivo.endswith(".enc"):
-            messagebox.showwarning("Aviso", "Selecione um arquivo com extensão .enc para decifrar.")
+            messagebox.showwarning("[AVISO]", "Selecione um arquivo com extensão .enc para decifrar.")
             return
     
         try:
             decifrar_arquivo(self.arquivo, self.chave)
-            messagebox.showinfo("Sucesso", "Arquivo decifrado com sucesso!")
+            messagebox.showinfo("[SUCESSO]", "Arquivo decifrado com sucesso!")
         except Exception as e:
-            messagebox.showerror("Erro", f"Falha ao decifrar: {str(e)}")
+            messagebox.showerror("[ERRO]", f"Falha ao decifrar: {str(e)}")
             
     def mostrar_cabecalho(self):
         if not self.arquivo:
-            messagebox.showwarning("Aviso", "Selecione um arquivo primeiro.")
+            messagebox.showwarning("[AVISO]", "Selecione um arquivo primeiro.")
             return 
         info = visualizar_cabecalho(self.arquivo)
         messagebox.showinfo("Cabeçalho do Arquivo", info)
