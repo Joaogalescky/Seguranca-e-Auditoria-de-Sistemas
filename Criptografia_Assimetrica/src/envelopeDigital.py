@@ -1,12 +1,13 @@
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-from cryptography.hazmat.primitives import padding, hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import rsa, padding as asympadding
-from cryptography.hazmat.backends import default_backend
-import secrets
 import os
-from typing import Tuple
+import secrets
 import tkinter as tk
 from tkinter import filedialog, messagebox
+
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import hashes, padding, serialization
+from cryptography.hazmat.primitives.asymmetric import padding as asympadding
+from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 # Envelope digital: cifra com AES-CBC + PKCS7 e cifra a chave AES com RSA-OAEP.
 """ Formato do envelope:
@@ -25,14 +26,16 @@ resto: texto cifrado AES-CBC (padded PKCS7)
 MAGIC = b'ED'  # 2 bytes
 VERSION = 0x01
 
+
 def aes_cbc_cifrar(chave: bytes, iv: bytes, texto_claro: bytes):
-    padder = padding.PKCS7(128).padder() # 128 = 16 bytes
-    padded = padder.update(texto_claro) + padder.finalize() # Aplica o padder ao texo_claro
-    cifrar = Cipher(algorithms.AES(chave), modes.CBC(iv), backend=default_backend()) # Prepara para a criptografia 
+    padder = padding.PKCS7(128).padder()  # 128 = 16 bytes
+    padded = padder.update(texto_claro) + padder.finalize()  # Aplica o padder ao texo_claro
+    cifrar = Cipher(algorithms.AES(chave), modes.CBC(iv), backend=default_backend())  # Prepara para a criptografia
     # backend = motor criptografico
-    cifrador = cifrar.encryptor() 
+    cifrador = cifrar.encryptor()
     texto_cifrado = cifrador.update(padded) + cifrador.finalize()
     return texto_cifrado
+
 
 def aes_cbc_decifrar(chave: bytes, iv: bytes, texto_cifrado: bytes):
     # Decifrar e remover padding
@@ -43,26 +46,30 @@ def aes_cbc_decifrar(chave: bytes, iv: bytes, texto_cifrado: bytes):
     texto_decifrado = unpadder.update(padded_texto_claro) + unpadder.finalize()
     return texto_decifrado
 
+
 def gerar_chaves_rsa(bits: int = 4096):
     chave_privada = rsa.generate_private_key(public_exponent=65537, key_size=bits, backend=default_backend(), )
     chave_publica = chave_privada.public_key()
-    
+
     chave_privada_pem = chave_privada.private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption(), )
-    
+
     chave_publica_pem = chave_publica.public_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PublicFormat.SubjectPublicKeyInfo, )
-    
+
     return chave_privada_pem, chave_publica_pem
+
 
 def carregar_chave_publica(chave_publica_pem: bytes):
     return serialization.load_pem_public_key(chave_publica_pem, backend=default_backend())
 
+
 def carregar_chave_privada(chave_privada_pem: bytes):
     return serialization.load_pem_private_key(chave_privada_pem, password=None, backend=default_backend())
+
 
 def cifrar_rsa_publica(chave_publica, conteudo: bytes):
     return chave_publica.encrypt(
@@ -74,6 +81,7 @@ def cifrar_rsa_publica(chave_publica, conteudo: bytes):
         )
     )
 
+
 def cifrar_rsa_privada(chave_privada, texto_cifrado: bytes):
     return chave_privada.decrypt(
         texto_cifrado,
@@ -83,6 +91,7 @@ def cifrar_rsa_privada(chave_privada, texto_cifrado: bytes):
             label=None
         )
     )
+
 
 # Construir envelope
 def criar_envelope_bytes(texto_limpo: bytes, recipiente_publico_pem: bytes, len_chave_aes_bytes: int = 32):
@@ -107,20 +116,21 @@ def criar_envelope_bytes(texto_limpo: bytes, recipiente_publico_pem: bytes, len_
     header += MAGIC
     header += bytes([VERSION])
     header += bytes([len_chave_aes_bytes])
-    header += len_chave_cifrada_rsa.to_bytes(2, 'big') # 65535 bytes
+    header += len_chave_cifrada_rsa.to_bytes(2, 'big')  # 65535 bytes
     header += iv
     envelope = bytes(header) + chave_cifrada_rsa + texto_cifrado
     return envelope
 
+
 def abrir_envelope_bytes(envelope: bytes, recipiente_privado_pem: bytes):
     # Decifra envelope bytes e retorna plaintext.
     # MAGIC + versão + len AES + len RSA + IV
-    tamanho_cabecalho = 2 + 1 + 1 + 2 + 16 
+    tamanho_cabecalho = 2 + 1 + 1 + 2 + 16
     if len(envelope) < tamanho_cabecalho:
        raise ValueError("[ERRO] Tamanho de envelope inválido!")
 
     idx_bytes = 0
-    if envelope[idx_bytes:idx_bytes+2] != MAGIC:
+    if envelope[idx_bytes:idx_bytes + 2] != MAGIC:
         raise ValueError("[ERRO] Magic inválido! Não é um envelope ED!.")
     idx_bytes += 2
 
@@ -129,8 +139,8 @@ def abrir_envelope_bytes(envelope: bytes, recipiente_privado_pem: bytes):
         raise ValueError(f"[ERRO] Versão do envelope não suportada: {versao}")
 
     len_chave_aes = envelope[idx_bytes]; idx_bytes += 1
-    len_chave_cifrada_rsa = int.from_bytes(envelope[idx_bytes:idx_bytes+2], 'big'); idx_bytes += 2
-    iv = envelope[idx_bytes:idx_bytes+16]; idx_bytes += 16
+    len_chave_cifrada_rsa = int.from_bytes(envelope[idx_bytes:idx_bytes + 2], 'big'); idx_bytes += 2
+    iv = envelope[idx_bytes:idx_bytes + 16]; idx_bytes += 16
 
     chave_cifrada_rsa = envelope[idx_bytes:idx_bytes + len_chave_cifrada_rsa]; idx_bytes += len_chave_cifrada_rsa
     texto_cifrado = envelope[idx_bytes:]
@@ -144,17 +154,19 @@ def abrir_envelope_bytes(envelope: bytes, recipiente_privado_pem: bytes):
     texto_limpo = aes_cbc_decifrar(chave_aes, iv, texto_cifrado)
     return texto_limpo
 
+
 # Funções para trabalhar com arquivos
 def criar_envelope_arquivo(caminho_arquivo: str, recipiente_publico_pem: bytes, len_chave_aes_bytes: int = 32):
     with open(caminho_arquivo, 'rb') as f:
         conteudo = f.read()
     envelope = criar_envelope_bytes(conteudo, recipiente_publico_pem, len_chave_aes_bytes=len_chave_aes_bytes)
-    
+
     saida = caminho_arquivo + ".envelope"
     with open(saida, 'wb') as f:
         f.write(envelope)
     print(f"[SUCESSO] Envelope salvo em: {saida}")
     return saida
+
 
 def abrir_envelope_arquivo(envelope_path: str, caminho_saida: str, recipiente_privado_pem: bytes):
     with open(envelope_path, 'rb') as f:
@@ -164,13 +176,14 @@ def abrir_envelope_arquivo(envelope_path: str, caminho_saida: str, recipiente_pr
         f.write(texto_claro)
     print(f"[SUCESSO] Envelope aberto! Conteúdo salvo em: {caminho_saida}")
 
+
 def visualizar_cabecalho(caminho_arquivo: str):
     try:
         with open(caminho_arquivo, "rb") as f:
             conteudo = f.read(22)
-            if len (conteudo) < 22:
+            if len(conteudo) < 22:
                 raise ValueError("[ERRO] Envelope inválido/corrompido!")
-        
+
         """ Formato 
         - 2 bytes: magic = b'ED' (identificador)
         - 1 byte : versão = 0x01
@@ -178,13 +191,13 @@ def visualizar_cabecalho(caminho_arquivo: str):
         - 2 bytes: len_chave_cifrada_rsa (big-endian)
         - 16 bytes: iv (AES CBC IV)
         """
-        
+
         idx_bytes = 0
-        magic = conteudo[idx_bytes:idx_bytes+2]; idx_bytes += 2
+        magic = conteudo[idx_bytes:idx_bytes + 2]; idx_bytes += 2
         versao = conteudo[idx_bytes]; idx_bytes += 1
         aes_len = conteudo[idx_bytes]; idx_bytes += 1
-        rsa_len = int.from_bytes(conteudo[idx_bytes:idx_bytes+2], "big"); idx_bytes += 2
-        iv = conteudo[idx_bytes:idx_bytes+16]
+        rsa_len = int.from_bytes(conteudo[idx_bytes:idx_bytes + 2], "big"); idx_bytes += 2
+        iv = conteudo[idx_bytes:idx_bytes + 16]
 
         info = (
             f"Magic: {magic}\n"
@@ -194,9 +207,10 @@ def visualizar_cabecalho(caminho_arquivo: str):
             f"IV: {iv.hex()}"
         )
         return info
-    
+
     except Exception as e:
         return f"[ERRO] Não foi possivel ler o envelope: {str(e)}"
+
 
 # Teste de diferentes tamanhos e chaves
 def testes():
@@ -215,7 +229,7 @@ def testes():
     for i, msg in enumerate(testes, start=1):
         print(f"\n--- Teste {i}: mensagem {len(msg)} bytes ---")
         for k in aes_tamanho:
-            print(f"AES key = {k*8} bits")
+            print(f"AES key = {k * 8} bits")
             envelope = criar_envelope_bytes(msg, chave_publica_pem, len_chave_aes_bytes=k)
             recuperado = abrir_envelope_bytes(envelope, chave_privada_pem)
             ok = recuperado == msg
@@ -225,40 +239,41 @@ def testes():
 
     print("\nTodos os testes passaram.")
 
+
 class AppEnvelope:
     # Janela
     def __init__(self, master):
         self.master = master
         master.title("Envelope Digital AES-CBC | RSA-OAEP")
         master.geometry("400x300")
-        
+
         self.arquivo = None
         self.chave_privada_pem, self.chave_publica_pem = gerar_chaves_rsa(4096)
-        
+
         self.label = tk.Label(master, text="Nenhum arquivo selecionado", fg="blue")
         self.label.pack(pady=10)
-        
+
         self.botao_abrir = tk.Button(master, text="Selecionar Arquivo", command=self.selecionar_arquivo)
         self.botao_abrir.pack(pady=5)
-        
+
         self.botao_cifrar = tk.Button(master, text="Cifrar (Criar Envelope)", command=self.cifrar)
         self.botao_cifrar.pack(pady=5)
-        
+
         self.botao_decifrar = tk.Button(master, text="Decifrar (Abrir Envelope)", command=self.decifrar)
         self.botao_decifrar.pack(pady=5)
-        
+
         self.botao_cabecalho = tk.Button(master, text="Ver Cabeçalho", command=self.mostrar_cabecalho)
         self.botao_cabecalho.pack(pady=5)
-        
+
         self.botao_teste = tk.Button(master, text="Testar", command=self.testar)
         self.botao_teste.pack(pady=5)
-    
+
     def selecionar_arquivo(self):
         caminho = filedialog.askopenfilename()
         if caminho:
             self.arquivo = caminho
             self.label.config(text=os.path.basename(caminho))
-    
+
     def cifrar(self):
         if not self.arquivo:
             messagebox.showwarning("[AVISO]", "Selecione um arquivo.")
@@ -285,7 +300,7 @@ class AppEnvelope:
             messagebox.showinfo("[SUCESSO]", f"Envelope aberto. Arquivo salvo em: {saida}")
         except Exception as e:
             messagebox.showerror("[ERRO]", f"Falha ao decifrar: {str(e)}")
-            
+
     def mostrar_cabecalho(self):
         if not self.arquivo:
             messagebox.showwarning("[AVISO]", "Selecione um arquivo.")
@@ -297,8 +312,8 @@ class AppEnvelope:
             info = visualizar_cabecalho(self.arquivo)
             messagebox.showinfo("Cabecalho do Arquivo", info)
         except Exception as e:
-            messagebox.showerror("[ERRO]",f"Falha ao ler cabeçalho: {str(e)}")
-            
+            messagebox.showerror("[ERRO]", f"Falha ao ler cabeçalho: {str(e)}")
+
     def testar(self):
         try:
             testes()
@@ -306,8 +321,9 @@ class AppEnvelope:
         except Exception as e:
             messagebox.showerror("[ERRO]", f"Não foi possível realizar o teste!: {str(e)}")
 
+
 # Inicialização
 if __name__ == "__main__":
     root = tk.Tk()
     app = AppEnvelope(root)
-    root.mainloop()      
+    root.mainloop()
