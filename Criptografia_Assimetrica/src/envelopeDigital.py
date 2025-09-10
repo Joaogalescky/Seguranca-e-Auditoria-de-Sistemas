@@ -63,12 +63,63 @@ def gerar_chaves_rsa(bits: int = 4096):
     return chave_privada_pem, chave_publica_pem
 
 
-def carregar_chave_publica(chave_publica_pem: bytes):
-    return serialization.load_pem_public_key(chave_publica_pem, backend=default_backend())
+'''
+Corrigir: NÃO utilizar o par de chaves em variável.
+Cria-las para que posterior, quando encerrar o programa,
+possa descriptografar ou criptografar com as mesmas chaves
+'''
+
+def gerar_arquivos_pem_de_chaves_rsa(chave_privada, chave_publica):
+    bytes_privado = chave_privada.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(), )
+
+    with open('private_key.pem', 'xb') as arquivo_privado:
+        arquivo_privado.write(bytes_privado)
+
+    bytes_publico = chave_publica.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo, )
+
+    with open('public_key.pem', 'xb') as arquivo_publico:
+        arquivo_publico.write(bytes_publico) 
+    
+    return arquivo_privado, arquivo_publico
 
 
-def carregar_chave_privada(chave_privada_pem: bytes):
-    return serialization.load_pem_private_key(chave_privada_pem, password=None, backend=default_backend())
+def visualizar_arquivos_pem_de_chaves_rsa():
+    with open('public_key.pem', 'r') as arquivo:
+        conteudo = arquivo.read()
+        print(conteudo)
+        
+    with open('private_key.pem', 'r') as arquivo:
+        conteudo = arquivo.read()
+        print(conteudo)
+        
+        
+def deserializando_arquivos_pem_de_chaves_rsa():
+    with open('private_key.pem', 'rb') as arquivo_privado:
+        loaded_private_key = serialization.load_pem_private_key(
+                                    arquivo_privado.read(),
+                                    password=None,
+                                    backend=default_backend()
+                                )
+
+    with open('public_key.pem', 'rb') as arquivo_publico:
+        loaded_public_key = serialization.load_pem_public_key(
+                                arquivo_publico.read(),
+                                backend=default_backend()
+                            )
+    return loaded_private_key, loaded_public_key
+
+
+# def carregar_chave_publica(chave_publica_pem: bytes):
+#     return serialization.load_pem_public_key(chave_publica_pem, backend=default_backend())
+
+
+# def carregar_chave_privada(chave_privada_pem: bytes):
+#     return serialization.load_pem_private_key(chave_privada_pem, password=None, backend=default_backend())
 
 
 def cifrar_rsa_publica(chave_publica, conteudo: bytes):
@@ -107,6 +158,9 @@ def criar_envelope_bytes(texto_limpo: bytes, recipiente_publico_pem: bytes, len_
     texto_cifrado = aes_cbc_cifrar(chave_aes, iv, texto_limpo)
 
     # Cifrar a chave AES com RSA-OAEP
+    '''
+    ALTERAR para que carregue, deserialize o public_key.pem criado localmente
+    '''
     chave_publica = carregar_chave_publica(recipiente_publico_pem)
     chave_cifrada_rsa = cifrar_rsa_publica(chave_publica, chave_aes)
 
@@ -145,6 +199,9 @@ def abrir_envelope_bytes(envelope: bytes, recipiente_privado_pem: bytes):
     chave_cifrada_rsa = envelope[idx_bytes:idx_bytes + len_chave_cifrada_rsa]; idx_bytes += len_chave_cifrada_rsa
     texto_cifrado = envelope[idx_bytes:]
 
+    '''
+    ALTERAR para que carregue, deserialize o private_key.pem criado localmente
+    '''
     chave_privada = carregar_chave_privada(recipiente_privado_pem)
     chave_aes = cifrar_rsa_privada(chave_privada, chave_cifrada_rsa)
 
