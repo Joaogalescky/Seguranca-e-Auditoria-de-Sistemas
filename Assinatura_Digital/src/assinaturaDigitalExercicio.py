@@ -1,9 +1,6 @@
 import base64
-import hashlib
-import hmac
 import json
 import time
-import uuid
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.backends import default_backend
@@ -110,39 +107,9 @@ def exibir_historico():
             + f'para {t["destinatario"]} '
             + f'| R$ {t["valor"]} '
             + f'| {time.ctime(t["timestamp"])} '
+            + f' {t["assinatura"]}'
             f'| {t["status"]}\n'
         )
-
-
-# Hash
-def gerar_mensagem_autenticada(mensagem, chave):
-    timestamp = int(
-        time.time()
-    )  # Gerar um 'carimbo de data/hora' (validade temporal)
-    nonce = str(uuid.uuid4())  # nonce = id único aleatório
-
-    mensagem_autenticada = {
-        'dados': mensagem,
-        'timestamp': timestamp,
-        'nonce': nonce,
-    }
-
-    # Serializar a mensagem para string Json ordenada
-    mensagem_serializada = json.dumps(
-        mensagem_autenticada, sort_keys=True
-    ).encode()
-    assinatura = hmac.new(
-        chave.encode(),
-        # Gera o HMAC da mensagem com SHA-256,
-        # retornando como string hexadecimal
-        mensagem_serializada,
-        hashlib.sha256,
-    ).hexdigest()
-    mensagem_autenticada['hmac'] = assinatura  # Add assinatura HMAC
-
-    print('Mensagem autenticada: ', mensagem_autenticada, '\n')
-
-    return mensagem_autenticada
 
 
 # Geração de par de chaves
