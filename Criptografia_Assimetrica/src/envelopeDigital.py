@@ -2,6 +2,7 @@ import os
 import secrets
 import tkinter as tk
 from tkinter import filedialog, messagebox
+from typing import Union
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, padding, serialization
@@ -63,40 +64,15 @@ def gerar_chaves_rsa(bits: int = 4096):
     return chave_privada_pem, chave_publica_pem
 
 
-'''
-Corrigir: NÃO utilizar o par de chaves em variável.
-Cria-las para que posterior, quando encerrar o programa,
-possa descriptografar ou criptografar com as mesmas chaves
-'''
-
-def gerar_arquivos_pem_de_chaves_rsa(chave_privada, chave_publica):
-    bytes_privado = chave_privada.private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(), )
-
+def gerar_arquivos_pem_de_chaves_rsa(chave_privada_pem: bytes, chave_publica_pem: bytes):
     with open('private_key.pem', 'xb') as arquivo_privado:
-        arquivo_privado.write(bytes_privado)
-
-    bytes_publico = chave_publica.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo, )
+        arquivo_privado.write(chave_privada_pem)
 
     with open('public_key.pem', 'xb') as arquivo_publico:
-        arquivo_publico.write(bytes_publico) 
+        arquivo_publico.write(chave_publica_pem) 
     
-    return arquivo_privado, arquivo_publico
+    print("[SUCESSO] Chaves geradas e salvas em 'private_key.pem' e 'public_key.pem'")
 
-
-def visualizar_arquivos_pem_de_chaves_rsa():
-    with open('public_key.pem', 'r') as arquivo:
-        conteudo = arquivo.read()
-        print(conteudo)
-        
-    with open('private_key.pem', 'r') as arquivo:
-        conteudo = arquivo.read()
-        print(conteudo)
-        
         
 def deserializando_arquivos_pem_de_chaves_rsa():
     with open('private_key.pem', 'rb') as arquivo_privado:
@@ -114,12 +90,22 @@ def deserializando_arquivos_pem_de_chaves_rsa():
     return loaded_private_key, loaded_public_key
 
 
-# def carregar_chave_publica(chave_publica_pem: bytes):
-#     return serialization.load_pem_public_key(chave_publica_pem, backend=default_backend())
+def carregar_chave_publica(chave_publica_pem: Union[bytes, str]):
+    if isinstance(chave_publica_pem, str):
+        with open(chave_publica_pem, 'rb') as f:
+                data = f.read()
+    else:
+        data = chave_publica_pem
+    return serialization.load_pem_public_key(data, backend=default_backend())
 
 
-# def carregar_chave_privada(chave_privada_pem: bytes):
-#     return serialization.load_pem_private_key(chave_privada_pem, password=None, backend=default_backend())
+def carregar_chave_privada(chave_privada_pem: Union[bytes, str]):
+    if isinstance(chave_privada_pem, str):
+        with open(chave_privada_pem, 'rb') as f:
+                data = f.read()
+    else:
+        data = chave_privada_pem
+    return serialization.load_pem_private_key(data, password=None, backend=default_backend())
 
 
 def cifrar_rsa_publica(chave_publica, conteudo: bytes):
@@ -144,7 +130,6 @@ def cifrar_rsa_privada(chave_privada, texto_cifrado: bytes):
     )
 
 
-# Construir envelope
 def criar_envelope_bytes(texto_limpo: bytes, recipiente_publico_pem: bytes, len_chave_aes_bytes: int = 32):
     # Retorna bytes do envelope.
     if len_chave_aes_bytes not in (16, 24, 32):
@@ -158,9 +143,6 @@ def criar_envelope_bytes(texto_limpo: bytes, recipiente_publico_pem: bytes, len_
     texto_cifrado = aes_cbc_cifrar(chave_aes, iv, texto_limpo)
 
     # Cifrar a chave AES com RSA-OAEP
-    '''
-    ALTERAR para que carregue, deserialize o public_key.pem criado localmente
-    '''
     chave_publica = carregar_chave_publica(recipiente_publico_pem)
     chave_cifrada_rsa = cifrar_rsa_publica(chave_publica, chave_aes)
 
@@ -269,19 +251,37 @@ def visualizar_cabecalho(caminho_arquivo: str):
         return f"[ERRO] Não foi possivel ler o envelope: {str(e)}"
 
 
-# Teste de diferentes tamanhos e chaves
-def testes():
-    # Gera par RSA para destinatário
-    chave_privada_pem, chave_publica_pem = gerar_chaves_rsa(4096)
+def testes(caminho_privado=None, caminho_publico=None):
+    """
+    Executa testes de cifragem/decifragem.
+    Se receber caminhos de chave privada/pública, usa eles.
+    Caso contrário, tenta usar 'private_key.pem' e 'public_key.pem' no diretório atual.
+    Se não existirem, gera novas chaves e salva antes de rodar os testes.
+    """
+
+    if caminho_privado and caminho_publico:
+        private_key_path = caminho_privado
+        public_key_path = caminho_publico
+    else:
+        private_key_path = "private_key.pem"
+        public_key_path = "public_key.pem"
+
+    if not (os.path.exists(private_key_path) and os.path.exists(public_key_path)):
+        print("[INFO] Não foram encontradas chaves PEM. Gerando novas...")
+        chave_privada_pem, chave_publica_pem = gerar_chaves_rsa(4096)
+        gerar_arquivos_pem_de_chaves_rsa(chave_privada_pem, chave_publica_pem)
+
+    chave_privada = carregar_chave_privada(private_key_path)
+    chave_publica = carregar_chave_publica(public_key_path)
 
     # Mensagens de teste: 1 byte, 16 bytes, 1024 bytes, 1MB (aprox)
-    testes = [
+    mensagens_teste = [
         b'A',
         b'B' * 16,
         b'C' * 1024,
-        b'D' * (1024 * 512)  # 512 KB (ajuste para maior se quiser)
+        b'D' * (1024 * 512)  # 128/192/256 bits
     ]
-    aes_tamanho = [16, 24, 32]  # 128/192/256 bits
+    aes_tamanho = [16, 24, 32]
 
     for i, msg in enumerate(testes, start=1):
         print(f"\n--- Teste {i}: mensagem {len(msg)} bytes ---")
@@ -302,16 +302,26 @@ class AppEnvelope:
     def __init__(self, master):
         self.master = master
         master.title("Envelope Digital AES-CBC | RSA-OAEP")
-        master.geometry("400x300")
-
+        master.geometry("400x350")
+        
         self.arquivo = None
-        self.chave_privada_pem, self.chave_publica_pem = gerar_chaves_rsa(4096)
+        self.caminho_chave_publica = None
+        self.caminho_chave_privada = None
 
         self.label = tk.Label(master, text="Nenhum arquivo selecionado", fg="blue")
         self.label.pack(pady=10)
 
         self.botao_abrir = tk.Button(master, text="Selecionar Arquivo", command=self.selecionar_arquivo)
         self.botao_abrir.pack(pady=5)
+        
+        self.botao_gerar_chaves = tk.Button(master, text="Gerar Par de Chaves", command=self.gerar_chaves)
+        self.botao_gerar_chaves.pack(pady=5)
+        
+        self.botao_chave_publica = tk.Button(master, text="Selecionar Chave Pública", command=self.selecionar_chave_publica)
+        self.botao_chave_publica.pack(pady=5)
+
+        self.botao_chave_privada = tk.Button(master, text="Selecionar Chave Privada", command=self.selecionar_chave_privada)
+        self.botao_chave_privada.pack(pady=5)
 
         self.botao_cifrar = tk.Button(master, text="Cifrar (Criar Envelope)", command=self.cifrar)
         self.botao_cifrar.pack(pady=5)
@@ -330,6 +340,50 @@ class AppEnvelope:
         if caminho:
             self.arquivo = caminho
             self.label.config(text=os.path.basename(caminho))
+    
+    def gerar_chaves(self):
+        try:
+            chave_privada_pem, chave_publica_pem = gerar_chaves_rsa(4096)
+            gerar_arquivos_pem_de_chaves_rsa(chave_privada_pem, chave_publica_pem)
+            messagebox.showinfo("[SUCESSO]", "Chaves geradas com sucesso!")
+        except FileExistsError:
+            messagebox.showwarning("[AVISO]", "Já existem arquivos 'private_key.pem' e 'public_key.pem'\n")
+        except Exception as e:
+            messagebox.showerror("[ERRO]", f"Erro ao gerar chaves: {str(e)}")
+      
+    def selecionar_chave_publica(self):
+        if not self.arquivo:
+            messagebox.showwarning("[AVISO]", "Selecione um arquivo.")
+            return
+        if self.arquivo.endswith(".pem"):
+            messagebox.showwarning("[AVISO]", "Não é uma chave")
+            return
+        try:
+            caminho = filedialog.askopenfilename(
+            title="Escolha a chave pública (PEM)",
+            filetypes=[("PEM files", "*.pem"), ("All files", "*.*")])
+            if caminho:
+                self.caminho_chave_publica = caminho
+                self.label.config(text=f"{os.path.basename(self.arquivo) if self.arquivo else 'Nenhum arquivo selecionado'}\nChave pública: {os.path.basename(caminho)}")
+        except Exception as e:
+            messagebox.showerror("[ERRO]", f"Falha ao selecionar uma chave publica: {str(e)}")
+            
+    def selecionar_chave_privada(self):
+        if not self.arquivo:
+            messagebox.showwarning("[AVISO]", "Selecione um arquivo.")
+            return
+        if self.arquivo.endswith(".pem"):
+            messagebox.showwarning("[AVISO]", "Não é uma chave")
+            return
+        try:
+            caminho = filedialog.askopenfilename(
+            title="Escolha a chave privada (PEM)",
+            filetypes=[("PEM files", "*.pem"), ("All files", "*.*")])
+            if caminho:
+                self.caminho_chave_privada = caminho
+                self.label.config(text=f"{os.path.basename(self.arquivo) if self.arquivo else 'Nenhum arquivo selecionado'}\nChave privada: {os.path.basename(caminho)}")
+        except Exception as e:
+            messagebox.showerror("[ERRO]", f"Falha ao selecionar uma chave privada: {str(e)}")
 
     def cifrar(self):
         if not self.arquivo:
@@ -338,8 +392,11 @@ class AppEnvelope:
         if self.arquivo.endswith(".envelope"):
             messagebox.showwarning("[AVISO]", "Arquivo já cifrado!")
             return
+        if not self.caminho_chave_publica:
+            messagebox.showwarning("[AVISO]", "Selecione uma chave pública (.pem) antes de cifrar.")
+            return
         try:
-            saida = criar_envelope_arquivo(self.arquivo, self.chave_publica_pem, len_chave_aes_bytes=32)
+            saida = criar_envelope_arquivo(self.arquivo, self.caminho_chave_publica, len_chave_aes_bytes=32)
             messagebox.showinfo("[SUCESSO]", f"Envelope criado com sucesso em: {saida}")
         except Exception as e:
             messagebox.showerror("[ERRO]", f"Falha ao cifrar: {str(e)}")
@@ -351,9 +408,12 @@ class AppEnvelope:
         if not self.arquivo.endswith(".envelope"):
             messagebox.showwarning("[AVISO]", "Selecione um arquivo .envelope para abrir.")
             return
+        if not self.caminho_chave_privada:
+            messagebox.showwarning("[AVISO]", "Selecione uma chave privada (.pem) antes de decifrar.")
+            return
         try:
             saida = self.arquivo.replace(".envelope", "_decifrado")
-            abrir_envelope_arquivo(self.arquivo, saida, self.chave_privada_pem)
+            abrir_envelope_arquivo(self.arquivo, saida, self.caminho_chave_privada)
             messagebox.showinfo("[SUCESSO]", f"Envelope aberto. Arquivo salvo em: {saida}")
         except Exception as e:
             messagebox.showerror("[ERRO]", f"Falha ao decifrar: {str(e)}")
@@ -373,7 +433,7 @@ class AppEnvelope:
 
     def testar(self):
         try:
-            testes()
+            testes(self.caminho_chave_privada, self.caminho_chave_publica)
             messagebox.showinfo("[SUCESSO]", "Visualize o terminal para ver o resultado!")
         except Exception as e:
             messagebox.showerror("[ERRO]", f"Não foi possível realizar o teste!: {str(e)}")
