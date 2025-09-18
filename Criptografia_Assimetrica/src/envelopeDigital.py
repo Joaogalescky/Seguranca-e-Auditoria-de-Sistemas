@@ -65,10 +65,11 @@ def gerar_chaves_rsa(bits: int = 4096):
 
 
 def gerar_arquivos_pem_de_chaves_rsa(chave_privada_pem: bytes, chave_publica_pem: bytes):
-    with open('private_key.pem', 'xb') as arquivo_privado:
+    # Gera (ou sobrescreve) as chaves no diretório atual
+    with open('private_key.pem', 'wb') as arquivo_privado:
         arquivo_privado.write(chave_privada_pem)
 
-    with open('public_key.pem', 'xb') as arquivo_publico:
+    with open('public_key.pem', 'wb') as arquivo_publico:
         arquivo_publico.write(chave_publica_pem) 
     
     print("[SUCESSO] Chaves geradas e salvas em 'private_key.pem' e 'public_key.pem'")
@@ -260,19 +261,16 @@ def testes(caminho_privado=None, caminho_publico=None):
     """
 
     if caminho_privado and caminho_publico:
-        private_key_path = caminho_privado
-        public_key_path = caminho_publico
+        chave_privada_path = caminho_privado
+        chave_publica_path = caminho_publico
     else:
-        private_key_path = "private_key.pem"
-        public_key_path = "public_key.pem"
+        chave_privada_path = "private_key.pem"
+        chave_publica_path = "public_key.pem"
 
-    if not (os.path.exists(private_key_path) and os.path.exists(public_key_path)):
+    if not (os.path.exists(chave_privada_path) and os.path.exists(chave_publica_path)):
         print("[INFO] Não foram encontradas chaves PEM. Gerando novas...")
         chave_privada_pem, chave_publica_pem = gerar_chaves_rsa(4096)
         gerar_arquivos_pem_de_chaves_rsa(chave_privada_pem, chave_publica_pem)
-
-    chave_privada = carregar_chave_privada(private_key_path)
-    chave_publica = carregar_chave_publica(public_key_path)
 
     # Mensagens de teste: 1 byte, 16 bytes, 1024 bytes, 1MB (aprox)
     mensagens_teste = [
@@ -283,12 +281,12 @@ def testes(caminho_privado=None, caminho_publico=None):
     ]
     aes_tamanho = [16, 24, 32]
 
-    for i, msg in enumerate(testes, start=1):
+    for i, msg in enumerate(mensagens_teste, start=1):
         print(f"\n--- Teste {i}: mensagem {len(msg)} bytes ---")
         for k in aes_tamanho:
             print(f"AES key = {k * 8} bits")
-            envelope = criar_envelope_bytes(msg, chave_publica_pem, len_chave_aes_bytes=k)
-            recuperado = abrir_envelope_bytes(envelope, chave_privada_pem)
+            envelope = criar_envelope_bytes(msg, chave_publica_path, len_chave_aes_bytes=k)
+            recuperado = abrir_envelope_bytes(envelope, chave_privada_path)
             ok = recuperado == msg
             print(f"-> OK: {ok} (envelope size {len(envelope)} bytes)")
             if not ok:
@@ -343,21 +341,32 @@ class AppEnvelope:
     
     def gerar_chaves(self):
         try:
+            # Se já existe, pergunte
+            existe_privada = os.path.exists("private_key.pem")
+            existe_publica = os.path.exists("public_key.pem")
+            
+            if existe_privada or existe_publica:
+                resposta = messagebox.askyesno(
+                    "Confirmação",
+                    "Já existem chaves 'private_key.pem' e/ou 'public_key.pem\n"
+                    "Deseja sobrescrevê-las?"
+                )
+                if not resposta:
+                    messagebox.showinfo("[INFO]", "Geração de chaves cancelada")
+                    return
+            
+            # Se não existe, gere
             chave_privada_pem, chave_publica_pem = gerar_chaves_rsa(4096)
             gerar_arquivos_pem_de_chaves_rsa(chave_privada_pem, chave_publica_pem)
-            messagebox.showinfo("[SUCESSO]", "Chaves geradas com sucesso!")
-        except FileExistsError:
-            messagebox.showwarning("[AVISO]", "Já existem arquivos 'private_key.pem' e 'public_key.pem'\n")
+                
+            if existe_privada or existe_publica:
+                messagebox.showinfo("[SUCESSO]", "Chaves foram regeneradas com sucesso!")
+            else:
+                messagebox.showinfo("[SUCESSO]", "Chaves foram geradas com sucesso!")
         except Exception as e:
             messagebox.showerror("[ERRO]", f"Erro ao gerar chaves: {str(e)}")
       
     def selecionar_chave_publica(self):
-        if not self.arquivo:
-            messagebox.showwarning("[AVISO]", "Selecione um arquivo.")
-            return
-        if self.arquivo.endswith(".pem"):
-            messagebox.showwarning("[AVISO]", "Não é uma chave")
-            return
         try:
             caminho = filedialog.askopenfilename(
             title="Escolha a chave pública (PEM)",
@@ -369,12 +378,6 @@ class AppEnvelope:
             messagebox.showerror("[ERRO]", f"Falha ao selecionar uma chave publica: {str(e)}")
             
     def selecionar_chave_privada(self):
-        if not self.arquivo:
-            messagebox.showwarning("[AVISO]", "Selecione um arquivo.")
-            return
-        if self.arquivo.endswith(".pem"):
-            messagebox.showwarning("[AVISO]", "Não é uma chave")
-            return
         try:
             caminho = filedialog.askopenfilename(
             title="Escolha a chave privada (PEM)",
