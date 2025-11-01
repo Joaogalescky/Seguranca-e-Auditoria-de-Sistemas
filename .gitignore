@@ -1,5 +1,20 @@
-# Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,python,venv
-# Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,python,venv
+# Created by https://www.toptal.com/developers/gitignore/api/visualstudiocode,venv,python,git
+# Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,venv,python,git
+
+### Git ###
+# Created by git for backups. To disable backups in Git:
+# $ git config --global mergetool.keepBackup false
+*.orig
+
+# Created by git when using merge tools for conflicts
+*.BACKUP.*
+*.BASE.*
+*.LOCAL.*
+*.REMOTE.*
+*_BACKUP_*.txt
+*_BASE_*.txt
+*_LOCAL_*.txt
+*_REMOTE_*.txt
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
@@ -204,6 +219,6 @@ pip-selfcheck.json
 .history
 .ionide
 
-# End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,python,venv
+# End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,venv,python,git
 
 # Generated using ignr.py - github.com/Antrikshy/ignr.py

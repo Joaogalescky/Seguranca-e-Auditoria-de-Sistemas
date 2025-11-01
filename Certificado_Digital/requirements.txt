@@ -1,0 +1,7 @@
+cryptography
+ignr
+taskipy
+ruff
+pipx
+pytest
+pytest-cov

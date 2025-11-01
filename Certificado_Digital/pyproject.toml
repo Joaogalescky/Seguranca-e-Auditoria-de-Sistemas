@@ -1,0 +1,52 @@
+[project]
+name = "certificado-digital"
+version = "0.1.0"
+description = "Sistema de geração, assinatura e validação de certificados digitais"
+authors = [
+    {name = "Joaogalescky",email = "joaocvgalescky@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.13,<4.0"
+dependencies = [
+    "ignr (>=2.2,<3.0)",
+    "taskipy (>=1.14.1,<2.0.0)",
+    "ruff (>=0.14.3,<0.15.0)",
+    "cryptography (>=46.0.3,<47.0.0)",
+    "pytest (>=8.4.2,<9.0.0)",
+    "pytest-cov (>=7.0.0,<8.0.0)"
+]
+
+[tool.poetry]
+packages = [{include = "certificado_digital", from = "src"}]
+
+[tool.pytest.ini_options]
+pythonpath = "."
+addopts = '-p no:warnings'
+testpaths = ["tests"]
+
+[tool.taskipy.tasks]
+lint = 'ruff check'
+pre_format = 'ruff check --fix'
+format = 'ruff format'
+pessoal = 'python certificado_pessoal.py'
+raiz = 'python certificado_raiz.py'
+cliente = 'python cliente.py'
+servidor = 'python servidor.py'
+test = 'pytest -s -x --cov=src -vv'
+post_test = 'coverage html'
+
+[tool.ruff]
+extend-exclude = ['migrations']
+
+[tool.ruff.lint]
+preview = true
+select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+ignore = ['W191', 'E501']
+
+[tool.ruff.format]
+preview = true
+quote-style = 'single'
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
