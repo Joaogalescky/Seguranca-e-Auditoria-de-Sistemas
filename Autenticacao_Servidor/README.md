@@ -133,11 +133,85 @@ Após iniciar o servidor, acesse:
 
 ## Segurança Implementada
 
+### Autenticação Básica (JWT)
+
 - **Hash de Senhas**: Argon2 (algoritmo recomendado pela OWASP)
 - **Tokens JWT**: Assinados com HS256
 - **Validação de Dados**: Pydantic schemas com validação de email
 - **Controle de Acesso**: Usuários só podem modificar seus próprios dados
 - **Expiração de Tokens**: Tokens com tempo de vida limitado
+
+### Autenticação Mútua (mTLS)
+
+O sistema implementa autenticação mútua através de certificados SSL/TLS, onde tanto o servidor quanto o cliente se autenticam mutuamente antes de estabelecer a comunicação.
+
+#### Arquitetura de Segurança mTLS
+
+```
+┌─────────────┐                                    ┌─────────────┐
+│   Cliente   │                                    │  Servidor   │
+│             │                                    │             │
+│ ┌─────────┐ │                                    │ ┌─────────┐ │
+│ │ Cert    │ │  1. ClientHello + Certificado     │ │ Cert    │ │
+│ │ Cliente │ ├───────────────────────────────────>│ │ Servidor│ │
+│ └─────────┘ │                                    │ └─────────┘ │
+│             │  2. ServerHello + Certificado      │             │
+│             │<───────────────────────────────────┤             │
+│             │                                    │             │
+│             │  3. Validação Mútua (CA)           │             │
+│             │<──────────────────────────────────>│             │
+│             │                                    │             │
+│             │  4. Handshake TLS Completo         │             │
+│             │<══════════════════════════════════>│             │
+│             │                                    │             │
+│             │  5. Requisição Criptografada       │             │
+│             │  (Certificado + JWT)               │             │
+│             ├───────────────────────────────────>│             │
+│             │                                    │ ┌─────────┐ │
+│             │  6. Resposta Criptografada         │ │Middleware│ │
+│             │<───────────────────────────────────┤ │  mTLS   │ │
+│             │                                    │ └─────────┘ │
+└─────────────┘                                    └─────────────┘
+```
+
+#### Estrutura de Certificados
+
+```
+certs/
+├── ca-cert.pem          # Certificado da Autoridade Certificadora
+├── ca-key.pem           # Chave privada da CA
+├── server-cert.pem      # Certificado do servidor (CN=localhost)
+├── server-key.pem       # Chave privada do servidor
+├── client-cert.pem      # Certificado do cliente (CN=client)
+└── client-key.pem       # Chave privada do cliente
+```
+
+#### Hierarquia de Confiança
+
+```
+┌──────────────────────────────────┐
+│  CA (IFPR-CA)                    │
+│  Autoridade Certificadora        │
+└────────────┬─────────────────────┘
+             │
+      ┌──────┴──────┐
+      │             │
+      ▼             ▼
+┌──────────┐  ┌──────────┐
+│ Servidor │  │ Cliente  │
+│ (signed) │  │ (signed) │
+└──────────┘  └──────────┘
+```
+
+#### Camadas de Segurança
+
+| Camada | Tecnologia | Proteção |
+|--------|-----------|----------|
+| 1 | TLS 1.2+ | Criptografia de transporte |
+| 2 | Certificado Servidor | Autenticação do servidor |
+| 3 | Certificado Cliente | Autenticação do cliente |
+| 4 | JWT Token | Autorização de usuário |
+| 5 | Hash Argon2 | Proteção de senhas |
 
 ## Comandos de Desenvolvimento
 
@@ -193,14 +267,11 @@ alembic downgrade -1
 
 ## Testes
 
-Para testar a API, utilize a documentação interativa em `/docs` ou ferramentas como:
+### Testes de Autenticação Básica (JWT)
 
-- cURL
-- Postman
-- HTTPie
-- Insomnia
+Para testar a API, utilize a documentação interativa em `/docs` ou ferramentas como cURL, Postman, HTTPie ou Insomnia.
 
-### Exemplo de uso com cURL
+#### Exemplo de uso com cURL
 
 ```bash
 # Criar usuário
@@ -217,6 +288,165 @@ curl -X POST "http://localhost:8000/auth/token" \
 curl -X GET "http://localhost:8000/users/" \
   -H "Authorization: Bearer <seu-token-aqui>"
 ```
+
+### Testes de Autenticação Mútua (mTLS)
+
+#### Iniciar Servidor mTLS
+
+```bash
+cd autenticao_servidor
+python run_mtls.py
+```
+
+O servidor estará disponível em `https://localhost:8443`
+
+#### Testes com cURL
+
+```bash
+# Teste 1: Conexão básica com certificado
+curl --cacert certs/ca-cert.pem \
+     --cert certs/client-cert.pem \
+     --key certs/client-key.pem \
+     https://localhost:8443/
+```
+
+**Resultado esperado:**
+```json
+{"message":"Hello World"}
+```
+
+```bash
+# Teste 2: Criar usuário com mTLS
+curl --cacert certs/ca-cert.pem \
+     --cert certs/client-cert.pem \
+     --key certs/client-key.pem \
+     -X POST https://localhost:8443/users/ \
+     -H "Content-Type: application/json" \
+     -d '{"username":"usuario_mtls","password":"senha123","email":"usuario@mtls.com"}'
+```
+
+**Resultado esperado:**
+```json
+{"id":1,"username":"usuario_mtls","email":"usuario@mtls.com"}
+```
+
+```bash
+# Teste 3: Login com mTLS
+curl --cacert certs/ca-cert.pem \
+     --cert certs/client-cert.pem \
+     --key certs/client-key.pem \
+     -X POST https://localhost:8443/auth/token \
+     -d "username=usuario@mtls.com&password=senha123"
+```
+
+**Resultado esperado:**
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer"
+}
+```
+
+```bash
+# Teste 4: Acessar recurso protegido com mTLS + JWT
+TOKEN="seu-token-aqui"
+curl --cacert certs/ca-cert.pem \
+     --cert certs/client-cert.pem \
+     --key certs/client-key.pem \
+     -H "Authorization: Bearer $TOKEN" \
+     https://localhost:8443/users/
+```
+
+**Resultado esperado:**
+```json
+{"users":[{"id":1,"username":"usuario_mtls","email":"usuario@mtls.com"}]}
+```
+
+```bash
+# Teste 5: Conexão SEM certificado (deve falhar)
+curl -k https://localhost:8443/
+```
+
+**Resultado esperado:** Conexão recusada (SSL handshake falhou)
+
+#### Demonstração Automatizada
+
+Execute o script de demonstração completa:
+
+```bash
+bash demo_mtls.sh
+```
+
+Este script executa todos os testes de autenticação mútua e exibe os resultados de forma organizada.
+
+#### Validação de Certificados
+
+```bash
+# Verificar detalhes do certificado do cliente
+openssl x509 -in certs/client-cert.pem -text -noout
+
+# Verificar validade do certificado
+openssl x509 -in certs/client-cert.pem -noout -dates
+
+# Verificar Common Name (CN)
+openssl x509 -in certs/client-cert.pem -noout -subject
+
+# Testar handshake SSL
+openssl s_client -connect localhost:8443 \
+  -cert certs/client-cert.pem \
+  -key certs/client-key.pem \
+  -CAfile certs/ca-cert.pem
+```
+
+## Resultados dos Testes mTLS
+
+### Teste 1: Conexão SEM Certificado
+- **Status:** Bloqueado
+- **Descrição:** O servidor recusa conexões que não apresentam certificado válido do cliente
+- **Segurança:** Comprova que o servidor exige autenticação mútua
+
+### Teste 2: Conexão COM Certificado
+- **Status:** Sucesso
+- **Resposta:** `{"message":"Hello World"}`
+- **Descrição:** Servidor aceita e processa requisições com certificado válido
+
+### Teste 3: Criar Usuário com mTLS
+- **Status:** Sucesso
+- **Descrição:** Usuário criado com sucesso utilizando autenticação mútua
+- **Segurança:** Operação protegida por certificado SSL
+
+### Teste 4: Login e Obtenção de Token JWT
+- **Status:** Sucesso
+- **Descrição:** Token JWT obtido com sucesso após validação de certificado e credenciais
+- **Segurança:** Dupla camada de autenticação (certificado + senha)
+
+### Teste 5: Acesso a Recurso Protegido
+- **Status:** Sucesso
+- **Descrição:** Acesso autorizado utilizando certificado SSL e token JWT
+- **Segurança:** Tripla validação (certificado + token + permissões)
+
+## Diferenças: Autenticação Unilateral vs Mútua
+
+### Autenticação Unilateral (JWT apenas)
+```
+Cliente → [Valida Servidor] → Servidor
+Cliente → [Envia Senha] → Servidor
+```
+
+### Autenticação Mútua (mTLS + JWT)
+```
+Cliente ↔ [Validam Mutuamente] ↔ Servidor
+Cliente → [Certificado + Senha] → Servidor
+```
+
+## Casos de Uso da Autenticação Mútua
+
+1. **APIs Corporativas**: Comunicação segura entre microserviços
+2. **Dispositivos IoT**: Autenticação de dispositivos em redes industriais
+3. **Sistemas Bancários**: Transações financeiras de alto valor
+4. **Saúde Digital**: Proteção de dados sensíveis de pacientes
+5. **Sistemas Governamentais**: Comunicação entre órgãos públicos
 
 ## Autor
 
