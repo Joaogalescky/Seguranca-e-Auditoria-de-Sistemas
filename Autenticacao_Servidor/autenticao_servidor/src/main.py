@@ -2,8 +2,8 @@ from http import HTTPStatus
 
 from fastapi import FastAPI
 
-from src.routers import auth, user
-from src.schemas import Message
+from .routers import auth, user
+from .schemas import Message
 
 app = FastAPI()
 

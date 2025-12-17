@@ -6,10 +6,10 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from src.database import get_session
-from src.models import User
-from src.schemas import FilterPage, Message, UserList, UserPublic, UserSchema
-from src.security import get_current_user, get_password_hash
+from ..database import get_session
+from ..models import User
+from ..schemas import FilterPage, Message, UserList, UserPublic, UserSchema
+from ..security import get_current_user, get_password_hash
 
 router = APIRouter(prefix='/users', tags=['users'])
 Session = Annotated[Session, Depends(get_session)]

@@ -27,6 +27,15 @@ def create_access_token(data: dict):
     return encoded_jwt
 
 
+def create_refresh_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.now(tz=ZoneInfo('UTC')) + timedelta(
+        days=settings.REFRESH_TOKEN_EXPIRE_DAYS
+    )
+    to_encode.update({'exp': expire, 'type': 'refresh'})
+    return encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+
 def get_password_hash(password: str):
     return pwd_context.hash(password)
 
