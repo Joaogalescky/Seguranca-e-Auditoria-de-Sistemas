@@ -1,22 +1,23 @@
 from http import HTTPStatus
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Body
 from fastapi.security import OAuth2PasswordRequestForm
+from jwt import decode
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_session
 from ..models import User
 from ..schemas import Token
-from ..security import create_access_token, get_current_user, verify_password
+from ..security import create_access_token, create_refresh_token, verify_password
+from ..settings import Settings
 
 router = APIRouter(prefix='/auth', tags=['auth'])
-
+settings = Settings()
 
 OAuth2Form = Annotated[OAuth2PasswordRequestForm, Depends()]
 Session = Annotated[Session, Depends(get_session)]
-CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 @router.post('/token', response_model=Token)
@@ -29,7 +30,6 @@ def login_for_access_token(
         raise HTTPException(
             status_code=HTTPStatus.UNAUTHORIZED,
             detail='Incorrect email or password',
-            headers={'WWW-Authenticate': 'Bearer'},
         )
     
     access_token = create_access_token(data={'sub': user.email})
@@ -42,7 +42,7 @@ def login_for_access_token(
     }
 
 @router.post('/refresh_token', response_model=Token)
-def refresh_access_token(refresh_token: str):
+def refresh_access_token(refresh_token: str = Body(..., embed=True)):
     try:
         payload = decode(refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         if payload.get('type') != 'refresh':
