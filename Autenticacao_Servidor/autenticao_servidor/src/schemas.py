@@ -1,5 +1,3 @@
-from typing import List
-
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
@@ -11,14 +9,12 @@ class UserSchema(BaseModel):
     username: str
     password: str
     email: EmailStr
-    statusVotacao: bool
 
 
 class UserPublic(BaseModel):
     id: int
     username: str
     email: EmailStr
-    statusVotacao: bool
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -29,6 +25,10 @@ class UserList(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+class TokenData(BaseModel):
+    email: str | None = None
 
 
 class FilterPage(BaseModel):

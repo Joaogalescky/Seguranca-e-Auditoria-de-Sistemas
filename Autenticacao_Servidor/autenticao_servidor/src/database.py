@@ -1,4 +1,5 @@
-from sqlalchemy import Session, create_engine
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
 
 from .settings import Settings
 
@@ -6,5 +7,5 @@ engine = create_engine(Settings().DATABASE_URL)
 
 
 def get_session():
-    with AsyncSession(engine, expire_on_commit=False) as session:
+    with Session(engine) as session:
         yield session

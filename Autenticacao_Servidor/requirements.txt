@@ -1,4 +1,4 @@
-#fastapi[standard]
+fastapi[standard]
 cryptography
 pipx
 taskipy
@@ -7,4 +7,5 @@ sqlalchemy
 alembic
 pyjwt
 tzdata
-#pwdlib[argon2]
+pwdlib[argon2]
+pydantic[email]

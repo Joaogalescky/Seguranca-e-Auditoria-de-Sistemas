@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import Session
+from sqlalchemy.orm import Session
 
 from src.database import get_session
 from src.models import User
@@ -40,7 +40,6 @@ def create_user(user: UserSchema, session: Session):
         username=user.username,
         password=hashed_password,
         email=user.email,
-        statusVotacao=user.statusVotacao,
     )
     session.add(db_user)
     session.commit()
@@ -60,7 +59,7 @@ def get_users(session: Session, filter_users: Annotated[FilterPage, Query()]):
 
 @router.get('/{user_id}', status_code=HTTPStatus.OK, response_model=UserPublic)
 def get_user_by_id(user_id: int, session: Session):
-    db_user = await session.scalar(select(User).where(User.id == user_id))
+    db_user = session.scalar(select(User).where(User.id == user_id))
     if not db_user:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail='User not found')
     return db_user
@@ -82,7 +81,6 @@ def update_user(
         current_user.username = user.username
         current_user.password = get_password_hash(user.password)
         current_user.email = user.email
-        current_user.statusVotacao = user.statusVotacao
         session.commit()
         session.refresh(current_user)
 
@@ -114,8 +112,6 @@ def update_user_partial(
             current_user.password = get_password_hash(user.password)
         if user.email is not None:
             current_user.email = user.email
-        if user.statusVotacao is not None:
-            current_user.statusVotacao = user.statusVotacao
         session.commit()
         session.refresh(current_user)
 
