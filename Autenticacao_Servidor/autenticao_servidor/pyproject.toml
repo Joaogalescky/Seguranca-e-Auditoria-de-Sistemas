@@ -20,6 +20,31 @@ dependencies = [
     "pydantic[email] (>=2.12.5,<3.0.0)"
 ]
 
+[tool.poetry]
+packages = [{include = "autenticao_servidor", from = "src"}]
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.12.9"
+taskipy = "^1.14.1"
+
+[tool.taskipy.tasks]
+lint = 'ruff check'
+pre_format = 'ruff check --fix'
+format = 'ruff format'
+run = 'fastapi dev src/main.py'
+pre_test = 'task lint'
+
+[tool.ruff]
+line-length = 90
+extend-exclude = ['migrations']
+
+[tool.ruff.lint]
+preview = true
+select = ['I', 'F', 'E', 'W', 'PL', 'PT', 'FAST']
+
+[tool.ruff.format]
+preview = true
+quote-style = 'single'
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
