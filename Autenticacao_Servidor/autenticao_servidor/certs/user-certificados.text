@@ -1,0 +1,11 @@
+# Gerar chave privada do cliente
+openssl genrsa -out client-key.pem 4096
+
+# Criar requisição de certificado do cliente
+openssl req -new -key client-key.pem -out client-csr.pem \
+  -subj "/C=BR/ST=Parana/L=Curitiba/O=IFPR/OU=TADS/CN=client"
+
+# Assinar certificado do cliente com a CA
+openssl x509 -req -days 365 -in client-csr.pem \
+  -CA ca-cert.pem -CAkey ca-key.pem -CAcreateserial \
+  -out client-cert.pem

@@ -1,0 +1,11 @@
+# Gerar chave privada do servidor
+openssl genrsa -out server-key.pem 4096
+
+# Criar requisição de certificado do servidor
+openssl req -new -key server-key.pem -out server-csr.pem \
+  -subj "/C=BR/ST=Parana/L=Curitiba/O=IFPR/OU=TADS/CN=localhost"
+
+# Assinar certificado do servidor com a CA
+openssl x509 -req -days 365 -in server-csr.pem \
+  -CA ca-cert.pem -CAkey ca-key.pem -CAcreateserial \
+  -out server-cert.pem
