@@ -1,0 +1,10 @@
+#fastapi[standard]
+cryptography
+pipx
+taskipy
+ruff
+sqlalchemy
+alembic
+pyjwt
+tzdata
+#pwdlib[argon2]
